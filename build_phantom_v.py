@@ -1,11 +1,15 @@
-<!DOCTYPE html>
+import os
+
+html_head = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHANTOM V</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+"""
 
+css_content = """
     <style>
         :root {
             --bg-color: #000000;
@@ -217,7 +221,9 @@
     </style>
 </head>
 <body>
+"""
 
+html_body = """
     <div id="game-wrapper">
         <div id="parallax-bg"></div>
         <div id="rage-overlay"></div>
@@ -318,7 +324,9 @@
             </div>
         </div>
     </div>
+"""
 
+js_storage = """
     <script>
         /**
          * STORAGE & DATA ARCHITECTURE (Unchanged per request)
@@ -430,7 +438,9 @@
         }
         
         const storage = new StorageManager();
+"""
 
+js_ui = """
         /**
          * UI CONTROLLER
          */
@@ -531,7 +541,9 @@
         document.getElementById('btn-return-menu').onclick = () => { updateMainMenu(); showScreen('main'); };
         
         updateMainMenu();
+"""
 
+js_input = """
         class InputHandler {
             constructor() {
                 this.keys = {}; this.mouseClicked = false;
@@ -562,7 +574,9 @@
             isDefending() { return this.isPressed('ShiftLeft') || this.isPressed('ShiftRight'); }
             isDodging() { return this.isPressed('KeyQ'); }
         }
+"""
 
+js_engine = """
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const CONFIG = { WIDTH: 800, HEIGHT: 600, FLOOR_Y: 500, ACTIONS: { IDLE: 'idle', ATTACK: 'attack', DODGE: 'dodge', DEFEND: 'defend' } };
@@ -750,7 +764,9 @@
                 ctx.restore();
             }
         }
+"""
 
+js_ai = """
         class PhantomAI {
             constructor(enemyRef, playerRef) {
                 this.phantom = enemyRef;
@@ -833,7 +849,9 @@
                 }
             }
         }
+"""
 
+js_game = """
         class GameMaster {
             constructor() {
                 this.input = new InputHandler();
@@ -1174,3 +1192,9 @@
     </script>
 </body>
 </html>
+"""
+
+full_content = html_head + css_content + html_body + js_storage + js_ui + js_input + js_engine + js_ai + js_game
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(full_content)
