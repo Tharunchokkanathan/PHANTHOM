@@ -414,76 +414,108 @@
                 return amount;
             }
 
-            drawStickman(ctx, colorOverride, isFlipped = false) {
+            drawFigure(ctx, colorOverride, isFlipped = false) {
                 const color = colorOverride || '#ffffff';
                 const baseOpacity = ctx.globalAlpha;
                 
                 ctx.save();
+                ctx.fillStyle = color;
                 ctx.strokeStyle = color;
-                ctx.lineWidth = 4;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
 
                 const headRadius = 12;
                 const headY = this.y - this.h + headRadius;
-                const torsoTopY = headY + headRadius;
-                const torsoBottomY = this.y - 25;
+                const neckY = headY + headRadius;
                 const neckX = this.x;
-                
-                // Head
-                ctx.beginPath();
-                ctx.arc(neckX, headY, headRadius, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Torso
-                ctx.beginPath();
-                ctx.moveTo(neckX, torsoTopY);
-                ctx.lineTo(neckX, torsoBottomY);
-                ctx.stroke();
+                const baseWidth = 35; 
 
-                // Legs
-                const legW = 15;
-                ctx.beginPath();
-                ctx.moveTo(neckX, torsoBottomY);
-                ctx.lineTo(neckX - legW, this.y);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(neckX, torsoBottomY);
-                ctx.lineTo(neckX + legW, this.y);
-                ctx.stroke();
-
-                // Arms & Weapon
-                let armAngle = 0.5; // Default pose
+                // Stance & Animation Base Angles (facing right)
+                let leanAngle = 0;
+                let armAngle = 0.5; 
                 let weaponAngle = 0;
-                
+                let isDefending = (this.action === CONFIG.ACTIONS.DEFEND);
+
                 if (this.action === CONFIG.ACTIONS.ATTACK) {
                     const attackProgress = Math.max(0, this.attackCooldown / 0.3); // 1 to 0
+                    leanAngle = 0.15; // Lean forward
                     armAngle = -Math.PI * 0.5 + (Math.PI * attackProgress);
                     weaponAngle = armAngle;
-                } else if (this.action === CONFIG.ACTIONS.DEFEND) {
-                    armAngle = -0.2;
+                } else if (isDefending) {
+                    leanAngle = -0.1; // Lean back
+                    armAngle = -0.3;
                     weaponAngle = -Math.PI * 0.4;
+                } else if (this.action === CONFIG.ACTIONS.DODGE) {
+                    leanAngle = 0.4; // Dash lean
+                    armAngle = 0.8;
                 }
+                
+                // Flip adjustments
+                if (isFlipped) leanAngle *= -1;
 
-                // Arm (Holding weapon)
-                const armLen = 25;
-                const handX = neckX + (isFlipped ? -1 : 1) * Math.cos(armAngle) * armLen;
-                const handY = torsoTopY + Math.sin(armAngle) * armLen;
+                // Apply Lean Transform
+                ctx.translate(neckX, this.y);
+                ctx.rotate(leanAngle);
+                ctx.translate(-neckX, -this.y);
+
+                // Draw Cloak/Body (Filled Silhouette)
+                const frontDir = isFlipped ? -1 : 1;
+                const backDir = isFlipped ? 1 : -1;
                 
                 ctx.beginPath();
-                ctx.moveTo(neckX, torsoTopY + 5);
-                ctx.lineTo(handX, handY);
-                ctx.stroke();
+                ctx.moveTo(neckX, neckY);
+                // Back curve
+                ctx.quadraticCurveTo(neckX + (backDir * 20), neckY + 15, neckX + (backDir * baseWidth/2), this.y);
+                // Bottom
+                ctx.lineTo(neckX + (frontDir * baseWidth/2), this.y);
+                // Front curve (straightish)
+                ctx.quadraticCurveTo(neckX + (frontDir * 5), neckY + 20, neckX, neckY);
+                ctx.fill();
 
-                // Second Arm
+                // Draw Head
                 ctx.beginPath();
-                ctx.moveTo(neckX, torsoTopY + 5);
-                ctx.lineTo(neckX + (isFlipped ? 1 : -1) * 15, torsoTopY + 20);
+                ctx.arc(neckX + (frontDir * 5), headY, headRadius, 0, Math.PI * 2); 
+                ctx.fill();
+
+                // Arm holding weapon
+                const armY = neckY + 4;
+                const armLen = 22;
+                const finalArmAngle = isFlipped ? Math.PI - armAngle : armAngle;
+                const handX = neckX + Math.cos(finalArmAngle) * armLen;
+                const handY = armY + Math.sin(finalArmAngle) * armLen;
+
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(neckX, armY);
+                ctx.lineTo(handX, handY);
                 ctx.stroke();
 
                 // Weapon (Sword)
                 this.drawWeapon(ctx, handX, handY, weaponAngle, color, isFlipped);
+
+                // Defense Shield Hologram
+                if (isDefending) {
+                    ctx.globalAlpha = baseOpacity * 0.6;
+                    ctx.strokeStyle = color === '#ffffff' ? '#00d4ff' : color;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    
+                    const shieldX = neckX + (frontDir * 20);
+                    const shieldY = this.y - this.h / 1.8;
+                    const radius = this.h / 1.4;
+                    const startArc = isFlipped ? Math.PI * 0.7 : -Math.PI * 0.3;
+                    const endArc = isFlipped ? Math.PI * 1.3 : Math.PI * 0.3;
+                    
+                    ctx.arc(shieldX, shieldY, radius, startArc, endArc);
+                    ctx.stroke();
+                    
+                    // Inner glow of shield
+                    ctx.globalAlpha = baseOpacity * 0.2;
+                    ctx.lineWidth = 12;
+                    ctx.beginPath();
+                    ctx.arc(shieldX, shieldY, radius - 2, startArc, endArc);
+                    ctx.stroke();
+                }
 
                 ctx.restore();
             }
@@ -524,10 +556,9 @@
                 ctx.shadowColor = color;
                 ctx.globalAlpha = opacity * 0.5;
                 
-                // Use stickman silhouette for glow layers
                 for(let i=1; i<=2; i++) {
                     ctx.shadowBlur = radius * i;
-                    this.drawStickman(ctx, color, false);
+                    this.drawFigure(ctx, color, false);
                 }
                 ctx.restore();
             }
@@ -535,7 +566,7 @@
             draw(ctx) {
                 ctx.save();
                 if (this.flashTime > 0) ctx.globalAlpha = 0.5;
-                this.drawStickman(ctx, '#ffffff', false);
+                this.drawFigure(ctx, '#ffffff', false);
                 ctx.restore();
             }
         }
