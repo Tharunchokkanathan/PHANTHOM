@@ -749,6 +749,14 @@
 
                 // Check Collisions & Damage
                 this.checkCombat();
+                
+                // If enemy is defeated, grant reward and advance round
+                if (this.enemy.health <= 0) {
+                    this.player.health = Math.min(100, this.player.health + 30);
+                    // Fast forward time to the next round boundary
+                    this.timeElapsed = this.roundIndex * 60;
+                    this.enemy.health = 100; // Prevent multiple triggers in same frame
+                }
 
                 // Round Progression
                 const currentRoundTime = 60 - (this.timeElapsed % 60);
