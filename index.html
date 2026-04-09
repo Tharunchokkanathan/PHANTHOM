@@ -475,17 +475,17 @@ spawnObstacle(){
 const types=['gap','low','high'];
 const t=types[Math.floor(Math.random()*types.length)];
 const o={x:W+50,type:t};
-if(t==='gap'){o.w=70+this.zone*10}
-else if(t==='low'){o.w=25;o.h=30+Math.random()*15}
-else{o.w=20;o.h=70+Math.random()*20;o.y=FLOOR-o.h}
+if(t==='gap'){o.w=60+this.zone*5}
+else if(t==='low'){o.w=25;o.h=25+Math.random()*10} // short barriers you jump over
+else{o.w=40;o.h=50;o.y=FLOOR-o.h} // tall barriers you slide under
 this.obstacles.push(o);
-if(Math.random()<0.4)this.orbs.push({x:W+80,y:FLOOR-80-Math.random()*40,active:true});
+if(Math.random()<0.4)this.orbs.push({x:W+80,y:FLOOR-90-Math.random()*40,active:true});
 }
 
 updateRun(dt){
 if(this.gameOver)return;
 this.runTime+=dt;
-const speed=280+this.zone*30;
+const speed=250+this.zone*25;
 this.bgOff+=speed*dt;
 this.runDist+=(speed*dt)/80;
 this.player.runCycle+=dt*10;
@@ -502,18 +502,39 @@ else if(this.player.isJumping&&this.player.canDoubleJump&&this.player.vy>-150){t
 this.player.isSliding=this.input.wantSlide()&&!this.player.isJumping;
 this.player.updateRunner(dt);
 
-// Spawn obstacles
+// Spawn obstacles — generous spacing
 this.spawnTimer-=dt;
-if(this.spawnTimer<=0){this.spawnObstacle();this.spawnTimer=1.2-this.zone*0.12+Math.random()*0.8}
+if(this.spawnTimer<=0){this.spawnObstacle();this.spawnTimer=2.0-this.zone*0.1+Math.random()*1.0}
 
 // Check obstacles
 for(let i=this.obstacles.length-1;i>=0;i--){
 let o=this.obstacles[i];o.x-=speed*dt;
 if(o.x<-120){this.obstacles.splice(i,1);continue}
-const pr=this.player.x+10,pl=this.player.x-10,pb=this.player.y,pt=this.player.y-this.player.h;
-if(o.type==='gap'){if(pr>o.x&&pl<o.x+o.w&&pb>=FLOOR){this.triggerRunDeath();return}}
-else if(o.type==='low'){if(pr>o.x&&pl<o.x+o.w&&pb>FLOOR-o.h&&pt<FLOOR){this.triggerRunDeath();return}}
-else if(o.type==='high'){if(pr>o.x&&pl<o.x+o.w&&pt<FLOOR-30){this.triggerRunDeath();return}}
+// Player hitbox: centered at player.x, width 20, from (y-h) to y
+const pr=this.player.x+10,pl=this.player.x-10;
+const pb=this.player.y;           // feet (FLOOR when grounded)
+const pt=this.player.y-this.player.h; // head
+
+// Only check collision if obstacle overlaps player horizontally
+if(pr>o.x && pl<o.x+o.w){
+  if(o.type==='gap'){
+    // Die only if player feet are at floor level (not jumping)
+    if(pb>=FLOOR-2 && !this.player.isJumping){this.triggerRunDeath();return}
+  }
+  else if(o.type==='low'){
+    // Low barrier sits on floor, height=o.h. Player must JUMP over it.
+    // Kill if player's feet are below the top of the barrier
+    const barrierTop=FLOOR-o.h;
+    if(pb>barrierTop){this.triggerRunDeath();return}
+  }
+  else if(o.type==='high'){
+    // High barrier hangs from above. Player must SLIDE under it.
+    // The gap below the barrier is FLOOR-30 to FLOOR (slide height=28)
+    // Kill if player's head is above the gap (not sliding low enough)
+    const clearanceY=FLOOR-32; // must be below this to survive
+    if(pt<clearanceY && !this.player.isSliding){this.triggerRunDeath();return}
+  }
+}
 }
 // Orbs
 for(let i=this.orbs.length-1;i>=0;i--){
