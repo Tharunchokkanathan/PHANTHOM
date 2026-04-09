@@ -1,11 +1,15 @@
-<!DOCTYPE html>
+import os
+
+html_head = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHANTOM - Psychological Combat</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+"""
 
+css_content = """
     <style>
         :root {
             --bg-color: #050505;
@@ -219,7 +223,9 @@
     </style>
 </head>
 <body>
+"""
 
+html_body = """
     <div id="game-wrapper">
         <div id="arena-background"></div>
         <div id="rage-overlay"></div>
@@ -316,7 +322,9 @@
             </div>
         </div>
     </div>
+"""
 
+js_storage = """
     <script>
         /**
          * STORAGE & DATA ARCHITECTURE
@@ -428,7 +436,9 @@
         }
         
         const storage = new StorageManager();
+"""
 
+js_ui = """
         /**
          * UI CONTROLLER
          */
@@ -553,7 +563,9 @@
         };
         
         updateMainMenu();
+"""
 
+js_engine = """
         /**
          * GAME ENGINE & COMBAT
          */
@@ -771,7 +783,9 @@
                 ctx.restore();
             }
         }
+"""
 
+js_ai_system = """
         class PhantomAI {
             constructor(enemyRef, playerRef) {
                 this.phantom = enemyRef;
@@ -884,7 +898,9 @@
                 }
             }
         }
+"""
 
+js_game = """
         class GameEngine {
             constructor() {
                 this.input = new InputHandler();
@@ -1120,3 +1136,9 @@
     </script>
 </body>
 </html>
+"""
+
+full_content = html_head + css_content + html_body + js_storage + js_ui + js_engine + js_ai_system + js_game
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(full_content)
