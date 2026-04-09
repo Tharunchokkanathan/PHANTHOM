@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHANTOM - Psychological Mirror</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --player-color: #ffffff;
+            --cyan: #00d4ff;
+            --blue: #0099ff;
+            --amber: #ffaa00;
+            --red: #ff0000;
+            --ui-font: 'Inter', sans-serif;
+            --title-font: 'Orbitron', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #fff;
+            font-family: var(--ui-font);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            box-shadow: 0 0 50px rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+        }
+
+        /* HUD Styles */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            pointer-events: none;
+        }
+
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .title-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title {
+            font-family: var(--title-font);
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .hp-bar-container {
+            width: 150px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        .hp-bar-fill {
+            height: 100%;
+            transition: width 0.3s ease-out;
+        }
+
+        #player-hp-fill { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+        #enemy-hp-fill { background: var(--blue); box-shadow: 0 0 10px var(--blue); }
+
+        .hp-text {
+            font-size: 10px;
+            margin-top: 4px;
+            font-family: monospace;
+            opacity: 0.8;
+        }
+
+        .center-hud {
+            text-align: center;
+        }
+
+        .round-info {
+            font-family: var(--title-font);
+            font-size: 14px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: monospace;
+        }
+
+        .corruption-section {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            text-align: center;
+        }
+
+        .corruption-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .corruption-meter {
+            font-size: 14px;
+            font-family: monospace;
+            color: var(--cyan);
+            letter-spacing: 2px;
+        }
+
+        .taunt-container {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 100%;
+            transition: opacity 0.5s;
+        }
+
+        #taunt-text {
+            font-size: 14px;
+            opacity: 0.8;
+            color: var(--cyan);
+            letter-spacing: 1px;
+            font-style: italic;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        #cooldown-display {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        /* Screen Overlays */
+        #overlays {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: all;
+        }
+
+        .screen.active { display: flex; }
+
+        .screen h1 {
+            font-family: var(--title-font);
+            font-size: 48px;
+            margin-bottom: 20px;
+            letter-spacing: 10px;
+        }
+
+        .screen p {
+            margin-bottom: 30px;
+            opacity: 0.7;
+        }
+
+        button {
+            padding: 12px 30px;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            font-family: var(--title-font);
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        #transition-screen h1 {
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="hud">
+            <div class="hud-header">
+                <div class="title-section">
+                    <div class="title">PHANTOM</div>
+                    <div class="hp-bar-container">
+                        <div id="player-hp-fill" class="hp-bar-fill" style="width: 100%;"></div>
+                    </div>
+                    <div id="player-hp-text" class="hp-text">HP: ██████████ 100/100</div>
+                </div>
+
+                <div class="center-hud">
+                    <div id="round-info" class="round-info">ROUND 1</div>
+                    <div id="timer" class="timer">60s</div>
+                </div>
+
+                <div class="title-section" style="align-items: flex-end;">
+                    <div class="title" style="text-shadow: none;">REFLECTION</div>
+                    <div class="hp-bar-container">
+                        <div id="enemy-hp-fill" class="hp-bar-fill" style="width: 100%;"></div>
+                    </div>
+                    <div id="enemy-hp-text" class="hp-text">HP: ██████████ 100/100</div>
+                </div>
+            </div>
+
+            <div class="corruption-section">
+                <div class="corruption-label">Corruption</div>
+                <div id="corruption-meter" class="corruption-meter">░░░░░░░░░░░░░░░░░░ 0%</div>
+            </div>
+
+            <div class="taunt-container">
+                <div id="taunt-text">Mirror initialized...</div>
+            </div>
+
+            <div id="cooldown-display">READY</div>
+            
+            <div class="controls-hint">
+                ARROWS/WASD=MOVE  |  SPACE/CLICK=ATTACK  |  SHIFT=DEFEND
+            </div>
+        </div>
+
+        <div id="overlays">
+            <!-- Start Screen -->
+            <div id="start-screen" class="screen active">
+                <h1>PHANTOM</h1>
+                <p>SURVIVE THE MIRROR FOR 180 SECONDS</p>
+                <button id="start-btn">BEGIN REFLECTION</button>
+            </div>
+
+            <!-- Transition Screen -->
+            <div id="transition-screen" class="screen">
+                <h1 id="transition-title">ROUND 1 COMPLETE</h1>
+                <p id="transition-desc">THE MIRROR IS EVOLVING...</p>
+            </div>
+
+            <!-- Win Screen -->
+            <div id="win-screen" class="screen">
+                <h1 style="color: var(--cyan);">YOU SURVIVED</h1>
+                <p>THE REFLECTION COULD NOT CONSUME YOU</p>
+                <button class="restart-btn">REFLECT AGAIN</button>
+            </div>
+
+            <!-- Loss Screen -->
+            <div id="loss-screen" class="screen">
+                <h1 style="color: var(--red);">DEFEATED</h1>
+                <p id="loss-message">YOU BECAME THE SHADOW</p>
+                <button class="restart-btn">RETRY</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * PHANTOM: Psychological Mirror
+         * Core Logic
+         */
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Constants & Config
+        const CONFIG = {
+            WIDTH: 800,
+            HEIGHT: 600,
+            FLOOR_Y: 500,
+            PLAYER_START_X: 150,
+            ENEMY_START_X: 650,
+            PLAYER_SIZE: { w: 40, h: 70 },
+            ACTIONS: {
+                IDLE: 'idle',
+                ATTACK: 'attack',
+                DODGE: 'dodge',
+                DEFEND: 'defend'
+            },
+            ROUNDS: [
+                { id: 1, duration: 60, delay: 200, color: '#0099ff', glitch: 0, ghost: 0, damageMult: 1 },
+                { id: 2, duration: 60, delay: 150, color: '#ffaa00', glitch: 0.1, ghost: 0, damageMult: 1 },
+                { id: 3, duration: 60, delay: 100, color: '#ff0000', glitch: 0.3, ghost: 1, damageMult: 1.5 },
+                { id: 4, duration: 999, delay: 50, color: '#ff0000', glitch: 0.6, ghost: 2, damageMult: 2.5 }
+            ],
+            TAUNTS: {
+                1: ["Mirror initialized...", "Ready?", "Let me see you", "Copying...", "Stay still"],
+                2: ["I see your patterns", "You're predictable", "I'm learning", "Why do you dodge?", "Fascinating"],
+                3: ["I AM YOU", "You can't escape yourself", "Reflection is perfection", "Surrender to the void", "Almost there"],
+                4: ["I AM BETTER", "Nightmare mode active", "NO ESCAPE", "I KNOW YOU", "DIE"]
+            }
+        };
+
+        // Utility: Input Handler
+        class InputHandler {
+            constructor() {
+                this.keys = {};
+                this.mouseClicked = false;
+                
+                window.addEventListener('keydown', e => this.keys[e.code] = true);
+                window.addEventListener('keyup', e => this.keys[e.code] = false);
+                window.addEventListener('mousedown', () => this.mouseClicked = true);
+                window.addEventListener('mouseup', () => this.mouseClicked = false);
+            }
+
+            isPressed(code) { return !!this.keys[code]; }
+            
+            getMovement() {
+                let dx = 0, dy = 0;
+                if (this.isPressed('ArrowLeft') || this.isPressed('KeyA')) dx -= 1;
+                if (this.isPressed('ArrowRight') || this.isPressed('KeyD')) dx += 1;
+                if (this.isPressed('ArrowUp') || this.isPressed('KeyW')) dy -= 1;
+                if (this.isPressed('ArrowDown') || this.isPressed('KeyS')) dy += 1;
+                return { dx, dy };
+            }
+
+            isAttacking() { return this.isPressed('Space') || this.mouseClicked; }
+            isDefending() { return this.isPressed('ShiftLeft') || this.isPressed('ShiftRight'); }
+        }
+
+        // Entity Class
+        class Entity {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.w = CONFIG.PLAYER_SIZE.w;
+                this.h = CONFIG.PLAYER_SIZE.h;
+                this.color = color;
+                this.health = 100;
+                this.action = CONFIG.ACTIONS.IDLE;
+                this.vx = 0;
+                this.vy = 0;
+                this.speed = 5;
+                this.attackCooldown = 0;
+                this.dodgeCooldown = 0;
+                this.isDefending = false;
+                this.lastAttackTime = 0;
+                this.flashTime = 0;
+            }
+
+            update(dt) {
+                if (this.attackCooldown > 0) this.attackCooldown -= dt;
+                if (this.dodgeCooldown > 0) this.dodgeCooldown -= dt;
+                if (this.flashTime > 0) this.flashTime -= dt;
+            }
+
+            takeDamage(amount) {
+                if (this.isDefending) amount *= 0.5;
+                this.health = Math.max(0, this.health - amount);
+                this.flashTime = 0.1;
+                return amount;
+            }
+
+            drawStickman(ctx, colorOverride, isFlipped = false) {
+                const color = colorOverride || '#ffffff';
+                const baseOpacity = ctx.globalAlpha;
+                
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                const headRadius = 12;
+                const headY = this.y - this.h + headRadius;
+                const torsoTopY = headY + headRadius;
+                const torsoBottomY = this.y - 25;
+                const neckX = this.x;
+                
+                // Head
+                ctx.beginPath();
+                ctx.arc(neckX, headY, headRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Torso
+                ctx.beginPath();
+                ctx.moveTo(neckX, torsoTopY);
+                ctx.lineTo(neckX, torsoBottomY);
+                ctx.stroke();
+
+                // Legs
+                const legW = 15;
+                ctx.beginPath();
+                ctx.moveTo(neckX, torsoBottomY);
+                ctx.lineTo(neckX - legW, this.y);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(neckX, torsoBottomY);
+                ctx.lineTo(neckX + legW, this.y);
+                ctx.stroke();
+
+                // Arms & Weapon
+                let armAngle = 0.5; // Default pose
+                let weaponAngle = 0;
+                
+                if (this.action === CONFIG.ACTIONS.ATTACK) {
+                    const attackProgress = Math.max(0, this.attackCooldown / 0.3); // 1 to 0
+                    armAngle = -Math.PI * 0.5 + (Math.PI * attackProgress);
+                    weaponAngle = armAngle;
+                } else if (this.action === CONFIG.ACTIONS.DEFEND) {
+                    armAngle = -0.2;
+                    weaponAngle = -Math.PI * 0.4;
+                }
+
+                // Arm (Holding weapon)
+                const armLen = 25;
+                const handX = neckX + (isFlipped ? -1 : 1) * Math.cos(armAngle) * armLen;
+                const handY = torsoTopY + Math.sin(armAngle) * armLen;
+                
+                ctx.beginPath();
+                ctx.moveTo(neckX, torsoTopY + 5);
+                ctx.lineTo(handX, handY);
+                ctx.stroke();
+
+                // Second Arm
+                ctx.beginPath();
+                ctx.moveTo(neckX, torsoTopY + 5);
+                ctx.lineTo(neckX + (isFlipped ? 1 : -1) * 15, torsoTopY + 20);
+                ctx.stroke();
+
+                // Weapon (Sword)
+                this.drawWeapon(ctx, handX, handY, weaponAngle, color, isFlipped);
+
+                ctx.restore();
+            }
+
+            drawWeapon(ctx, x, y, angle, color, isFlipped) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(isFlipped ? -angle + Math.PI : angle);
+                
+                const swordLen = 45;
+                
+                // Glow
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = color;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                
+                // Blade
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(swordLen, 0);
+                ctx.stroke();
+                
+                // Hilt
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(5, -8);
+                ctx.lineTo(5, 8);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            drawGlow(ctx, radius, opacity, colorOverride) {
+                const color = colorOverride || this.color;
+                ctx.save();
+                ctx.shadowBlur = radius;
+                ctx.shadowColor = color;
+                ctx.globalAlpha = opacity * 0.5;
+                
+                // Use stickman silhouette for glow layers
+                for(let i=1; i<=2; i++) {
+                    ctx.shadowBlur = radius * i;
+                    this.drawStickman(ctx, color, false);
+                }
+                ctx.restore();
+            }
+
+            draw(ctx) {
+                ctx.save();
+                if (this.flashTime > 0) ctx.globalAlpha = 0.5;
+                this.drawStickman(ctx, '#ffffff', false);
+                ctx.restore();
+            }
+        }
+
+        class Player extends Entity {
+            constructor() {
+                super(CONFIG.PLAYER_START_X, CONFIG.FLOOR_Y, '#ffffff');
+            }
+
+            handleInput(input, dt) {
+                const move = input.getMovement();
+                
+                // Movement
+                this.vx = move.dx * this.speed;
+                this.vy = move.dy * this.speed;
+
+                // Constraints
+                this.x = Math.max(50, Math.min(380, this.x + this.vx));
+                this.y = Math.max(400, Math.min(550, this.y + this.vy));
+
+                // Actions
+                this.isDefending = input.isDefending();
+                
+                if (this.isDefending) {
+                    this.action = CONFIG.ACTIONS.DEFEND;
+                } else if (input.isAttacking() && this.attackCooldown <= 0) {
+                    this.action = CONFIG.ACTIONS.ATTACK;
+                    this.attackCooldown = 0.3;
+                    this.flashTime = 0.1;
+                } else if ((move.dx !== 0 || move.dy !== 0) && this.dodgeCooldown <= 0 && input.isPressed('KeyShift')) {
+                    // Quick dodge if shift pressed while moving (alternate dodge)
+                    this.x += move.dx * 80;
+                    this.y += move.dy * 80;
+                    this.dodgeCooldown = 0.5;
+                    this.action = CONFIG.ACTIONS.DODGE;
+                } else {
+                    this.action = CONFIG.ACTIONS.IDLE;
+                }
+            }
+        }
+
+        class Mirror extends Entity {
+            constructor() {
+                super(CONFIG.ENEMY_START_X, CONFIG.FLOOR_Y, '#0099ff');
+                this.buffer = [];
+                this.delay = 200;
+                this.glitchRate = 0;
+                this.ghosts = 0;
+                this.isFlipped = true;
+                this.currentRoundData = CONFIG.ROUNDS[0];
+            }
+
+            updateBuffer(playerState, time) {
+                this.buffer.push({ ...playerState, time });
+                // Clean old buffer data (keep last 2s)
+                if (this.buffer.length > 120) this.buffer.shift();
+            }
+
+            getDelayedAction(currentTime) {
+                const targetTime = currentTime - (this.delay / 1000);
+                for (let i = this.buffer.length - 1; i >= 0; i--) {
+                    if (this.buffer[i].time <= targetTime) {
+                        return this.buffer[i];
+                    }
+                }
+                return null;
+            }
+
+            applyAction(delayedState) {
+                if (!delayedState) return;
+
+                // Mirror position with flip
+                const targetX = CONFIG.WIDTH - delayedState.x;
+                this.x = targetX;
+                this.y = delayedState.y;
+                
+                this.action = delayedState.action;
+                this.isDefending = (this.action === CONFIG.ACTIONS.DEFEND);
+            }
+
+            render(ctx, time) {
+                // Glitch effect: skip frames
+                if (this.glitchRate > 0 && Math.random() < this.glitchRate) return;
+
+                const drawCore = (offsetX = 0, opacity = 1.0, colorOverride = null, invert = false) => {
+                    ctx.save();
+                    if (invert) ctx.filter = 'invert(1)';
+                    ctx.globalAlpha = opacity;
+                    
+                    ctx.translate(offsetX, 0);
+                    
+                    // Render Glow
+                    this.drawGlow(ctx, 10, opacity, colorOverride);
+
+                    // Body
+                    // Random color shift in round 3+
+                    let finalColor = colorOverride;
+                    if (this.currentRoundData.id >= 3 && Math.random() < 0.2) {
+                        finalColor = CONFIG.ROUNDS[2].color;
+                    }
+                    
+                    this.drawStickman(ctx, finalColor, true); // true for flipped
+                    
+                    ctx.restore();
+                };
+
+                // Ghost images
+                if (this.ghosts >= 1) {
+                    drawCore(20, 0.4, CONFIG.ROUNDS[0].color); // Cyan ghost
+                }
+                if (this.ghosts >= 2) {
+                    drawCore(-25, 0.5, '#ffffff', true); // Inverted ghost
+                }
+
+                // Main body
+                const isInverted = (this.currentRoundData.id === 4 && Math.random() < 0.8);
+                drawCore(0, 1.0, null, isInverted);
+            }
+        }
+
+        // Main Game Class
+        class Game {
+            constructor() {
+                this.player = new Player();
+                this.enemy = new Mirror();
+                this.input = new InputHandler();
+                
+                this.state = 'start'; // start, transition, playing, win, loss
+                this.timeElapsed = 0;
+                this.gameTime = 0;
+                this.roundIndex = 0;
+                this.isPaused = false;
+                this.lastTime = 0;
+                
+                this.initUI();
+            }
+
+            initUI() {
+                document.getElementById('start-btn').onclick = () => this.start();
+                document.querySelectorAll('.restart-btn').forEach(btn => {
+                    btn.onclick = () => location.reload();
+                });
+            }
+
+            start() {
+                document.getElementById('start-screen').classList.remove('active');
+                this.state = 'playing';
+                this.requestNextRound();
+            }
+
+            requestNextRound() {
+                const round = CONFIG.ROUNDS[this.roundIndex];
+                if (!round) {
+                    this.state = 'win';
+                    this.showWin();
+                    return;
+                }
+
+                this.enemy.currentRoundData = round;
+                this.enemy.delay = round.delay;
+                this.enemy.glitchRate = round.glitch;
+                this.enemy.ghosts = round.ghost;
+                this.enemy.color = round.color;
+                this.enemy.health = 100;
+                
+                // Show transition
+                if (this.roundIndex > 0) {
+                    this.state = 'transition';
+                    const overlay = document.getElementById('transition-screen');
+                    document.getElementById('transition-title').textContent = `ROUND ${this.roundIndex} COMPLETE`;
+                    
+                    const messages = ["THE MIRROR IS EVOLVING...", "I AM LEARNING...", "YOU CANNOT HIDE..."];
+                    document.getElementById('transition-desc').textContent = messages[this.roundIndex - 1] || "...";
+                    
+                    overlay.classList.add('active');
+                    setTimeout(() => {
+                        overlay.classList.remove('active');
+                        this.state = 'playing';
+                    }, 2000);
+                }
+
+                this.roundIndex++;
+                this.updateHUD();
+            }
+
+            update(time) {
+                if (this.state !== 'playing') return;
+
+                const dt = (time - this.lastTime) / 1000;
+                this.lastTime = time;
+                if (dt > 0.1) return; // Ignore large jumps
+
+                this.gameTime += dt;
+                this.timeElapsed += dt;
+
+                // Player Update
+                this.player.update(dt);
+                this.player.handleInput(this.input, dt);
+
+                // Buffer Player State
+                this.enemy.updateBuffer({
+                    x: this.player.x,
+                    y: this.player.y,
+                    action: this.player.action
+                }, this.gameTime);
+
+                // Enemy Update
+                const delayedAction = this.enemy.getDelayedAction(this.gameTime);
+                this.enemy.update(dt);
+                this.enemy.applyAction(delayedAction);
+
+                // Check Collisions & Damage
+                this.checkCombat();
+
+                // Round Progression
+                const currentRoundTime = 60 - (this.timeElapsed % 60);
+                if (this.timeElapsed >= this.roundIndex * 60) {
+                    this.requestNextRound();
+                }
+
+                // Win Condition
+                if (this.timeElapsed >= 180) {
+                    this.state = 'win';
+                    this.showWin();
+                }
+
+                // Loss Condition
+                if (this.player.health <= 0) {
+                    this.state = 'loss';
+                    this.showLoss();
+                }
+
+                this.updateHUD(currentRoundTime);
+                this.updateTaunts();
+            }
+
+            checkCombat() {
+                // Distance check
+                const dx = this.player.x - this.enemy.x;
+                const dy = this.player.y - this.enemy.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < 60) {
+                    // Player attacks enemy
+                    if (this.player.action === CONFIG.ACTIONS.ATTACK && this.player.attackCooldown > 0.25) {
+                        this.enemy.takeDamage(15);
+                    }
+                    // Enemy attacks player (mirrored)
+                    if (this.enemy.action === CONFIG.ACTIONS.ATTACK) {
+                        const damage = 10 * this.enemy.currentRoundData.damageMult;
+                        this.player.takeDamage(damage);
+                    }
+                }
+            }
+
+            updateHUD(roundTime = 60) {
+                // HP Bars
+                document.getElementById('player-hp-fill').style.width = `${this.player.health}%`;
+                document.getElementById('enemy-hp-fill').style.width = `${this.enemy.health}%`;
+                
+                const enemyColor = this.enemy.currentRoundData.color;
+                document.getElementById('enemy-hp-fill').style.backgroundColor = enemyColor;
+                document.getElementById('enemy-hp-fill').style.boxShadow = `0 0 10px ${enemyColor}`;
+
+                const drawBlocks = (hp) => {
+                    const blocks = Math.ceil(hp / 10);
+                    return '█'.repeat(blocks) + '░'.repeat(10 - blocks);
+                };
+
+                document.getElementById('player-hp-text').textContent = `HP: ${drawBlocks(this.player.health)} ${Math.ceil(this.player.health)}/100`;
+                document.getElementById('enemy-hp-text').textContent = `HP: ${drawBlocks(this.enemy.health)} ${Math.ceil(this.enemy.health)}/100`;
+
+                // Timer & Round
+                document.getElementById('round-info').textContent = `ROUND ${Math.min(3, this.roundIndex)}`;
+                document.getElementById('timer').textContent = `${Math.ceil(roundTime)}s`;
+
+                // Corruption
+                const corruptPct = Math.min(100, Math.floor((this.timeElapsed / 180) * 100));
+                const cBlocks = Math.floor(corruptPct / 5);
+                document.getElementById('corruption-meter').textContent = `${'▓'.repeat(cBlocks)}${'░'.repeat(20 - cBlocks)} ${corruptPct}%`;
+                if (corruptPct >= 100) document.getElementById('corruption-meter').textContent = "NIGHTMARE MODE";
+
+                // Cooldown
+                const cd = Math.max(0, this.player.attackCooldown);
+                const cdElem = document.getElementById('cooldown-display');
+                if (cd > 0) {
+                    cdElem.textContent = `COOLDOWN: ${cd.toFixed(1)}S`;
+                    cdElem.style.color = '#ff4444';
+                } else {
+                    cdElem.textContent = 'READY';
+                    cdElem.style.color = 'var(--cyan)';
+                }
+            }
+
+            updateTaunts() {
+                if (Math.floor(this.timeElapsed) % 15 === 0 && this._lastTauntedAt !== Math.floor(this.timeElapsed)) {
+                    const taunts = CONFIG.TAUNTS[this.roundIndex];
+                    if (taunts) {
+                        const text = taunts[Math.floor(Math.random() * taunts.length)];
+                        const el = document.getElementById('taunt-text');
+                        el.style.opacity = 0;
+                        setTimeout(() => {
+                            el.textContent = text;
+                            el.style.opacity = 0.8;
+                            el.style.color = this.roundIndex >= 3 ? 'var(--red)' : 'var(--cyan)';
+                        }, 500);
+                    }
+                    this._lastTauntedAt = Math.floor(this.timeElapsed);
+                }
+            }
+
+            showWin() {
+                document.getElementById('win-screen').classList.add('active');
+            }
+
+            showLoss() {
+                document.getElementById('loss-screen').classList.add('active');
+            }
+
+            render() {
+                ctx.clearRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+
+                // Floor
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, CONFIG.FLOOR_Y);
+                ctx.lineTo(CONFIG.WIDTH, CONFIG.FLOOR_Y);
+                ctx.stroke();
+
+                // Player
+                this.player.drawGlow(ctx, 15, 0.6, '#00d4ff');
+                this.player.draw(ctx);
+
+                // Enemy
+                this.enemy.render(ctx, this.gameTime);
+
+                // VFX: Background noise if corruption high
+                if (this.timeElapsed > 120) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.05;
+                    for(let i=0; i<10; i++) {
+                        ctx.fillStyle = Math.random() > 0.5 ? '#ff0000' : '#00ffff';
+                        ctx.fillRect(Math.random()*800, Math.random()*600, 2, 2);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            loop(time) {
+                this.update(time);
+                this.render();
+                requestAnimationFrame(t => this.loop(t));
+            }
+        }
+
+        // Initialize helper for css vars in JS
+        const getCSSVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        // Note: var(--cyan) doesn't work directly in JS string interpolation for color comparison but works in styles.
+
+        // Start Loop
+        const game = new Game();
+        requestAnimationFrame(t => game.loop(t));
+
+    </script>
+</body>
+</html>
