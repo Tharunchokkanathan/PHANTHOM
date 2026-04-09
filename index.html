@@ -168,17 +168,44 @@ applyShake(c){if(this.shakeT>0){c.translate((Math.random()-.5)*this.shakeM,(Math
 draw(c){this.p.forEach(p=>{c.globalAlpha=p.life;c.fillStyle=p.color;c.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size)});c.globalAlpha=1}
 }
 
-// ═══ VECTOR STICK FIGURE ═══
-// Helper: draw a thick filled limb between two points
-function drawLimb(ctx,x1,y1,x2,y2,w1,w2){
+// ═══ BATHROOM-SIGN HUMAN SILHOUETTE ═══
+// Draws a thick rounded limb (pill shape)
+function drawPill(ctx,x1,y1,x2,y2,w){
     const ang=Math.atan2(y2-y1,x2-x1);
-    const p=Math.PI/2;
+    const px=Math.cos(ang+Math.PI/2)*w;
+    const py=Math.sin(ang+Math.PI/2)*w;
     ctx.beginPath();
-    ctx.moveTo(x1+Math.cos(ang+p)*w1,y1+Math.sin(ang+p)*w1);
-    ctx.lineTo(x2+Math.cos(ang+p)*w2,y2+Math.sin(ang+p)*w2);
-    ctx.lineTo(x2+Math.cos(ang-p)*w2,y2+Math.sin(ang-p)*w2);
-    ctx.lineTo(x1+Math.cos(ang-p)*w1,y1+Math.sin(ang-p)*w1);
-    ctx.closePath();ctx.fill();
+    ctx.arc(x1,y1,w,ang+Math.PI/2,ang-Math.PI/2);
+    ctx.lineTo(x2-px,y2-py);
+    ctx.arc(x2,y2,w,ang-Math.PI/2,ang+Math.PI/2);
+    ctx.lineTo(x1+px,y1+py);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Draws the torso+shoulders+arms as one connected shape
+function drawBody(ctx,shoulderY,hipY,shoulderW,waistW,armEndY1,armEndY2,armOff1,armOff2,armW){
+    // One continuous filled shape: left hand → left arm → left shoulder → right shoulder → right arm → right hand → hip right → hip left
+    ctx.beginPath();
+    // Left arm (rounded end)
+    ctx.arc(-shoulderW+armOff1,armEndY1,armW,Math.PI,0,true);
+    // Up to left shoulder
+    ctx.lineTo(-shoulderW+armOff1+armW,shoulderY);
+    // Across shoulders (flat top)
+    ctx.lineTo(shoulderW+armOff2+armW,shoulderY);
+    // Down right arm (rounded end)
+    ctx.arc(shoulderW+armOff2,armEndY2,armW,0,Math.PI,true);
+    // Back up to right shoulder inner
+    ctx.lineTo(shoulderW+armOff2-armW,shoulderY);
+    // Down to right hip
+    ctx.lineTo(waistW,hipY);
+    // Across bottom (hip)
+    ctx.lineTo(-waistW,hipY);
+    // Up to left shoulder inner
+    ctx.lineTo(-shoulderW+armOff1-armW,shoulderY);
+    // Close back to left arm top
+    ctx.closePath();
+    ctx.fill();
 }
 
 function drawStickFigure(ctx, x, y, opts){
@@ -189,162 +216,118 @@ function drawStickFigure(ctx, x, y, opts){
     ctx.scale(scale,scale);
     ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineCap='round';ctx.lineJoin='round';
 
-    // Proportions — thick human shadow
-    const headR=8;
-    const neckY=-58, shoulderY=-50, chestY=-40, waistY=-28, hipY=-22;
-    const thighLen=14, shinLen=14, upperArm=12, foreArm=11;
-    // Limb widths (thick/tapered)
-    const thighW1=5.5, thighW2=4, shinW1=4, shinW2=2.5;
-    const armW1=4, armW2=3, foreW1=3, foreW2=2;
-    const torsoWTop=10, torsoWBot=7;
+    // === PROPORTIONS (bathroom sign style) ===
+    const headR=9;
+    const neckY=-60;       // top of neck
+    const shoulderY=-50;   // shoulder line
+    const hipY=-18;        // hip/crotch
+    const shoulderW=14;    // half-width at shoulders
+    const waistW=6;        // half-width at hip
+    const armW=4.5;        // arm thickness (radius)
+    const legW=5;          // leg thickness (radius)
+    const legLen=18;       // full leg length
 
     if(isSliding){
-        // === SLIDE: body horizontal, one leg extended, one tucked ===
+        // === SLIDE: body horizontal, legs forward ===
         ctx.save();
-        ctx.rotate(-0.08);ctx.translate(0,16);
+        ctx.translate(0,20);ctx.rotate(-0.12);
         // Head
-        ctx.beginPath();ctx.arc(22,neckY+36,headR,0,Math.PI*2);ctx.fill();
-        // Torso horizontal
-        drawLimb(ctx,-2,neckY+38,20,neckY+36,torsoWBot,torsoWTop);
-        // Front leg extended straight
-        drawLimb(ctx,-2,neckY+40,-18,neckY+42,thighW1,shinW2);
-        // Back leg slightly bent
-        drawLimb(ctx,2,neckY+40,-6,neckY+48,thighW1,shinW2);
-        // Arm trailing up
-        drawLimb(ctx,16,neckY+34,28,neckY+26,armW1,foreW2);
+        ctx.beginPath();ctx.arc(20,-28,headR,0,Math.PI*2);ctx.fill();
+        // Body horizontal (simplified)
+        drawPill(ctx,-8,-20,18,-20,7);
+        // Front leg extended
+        drawPill(ctx,-8,-18,-22,-14,legW);
+        // Back leg tucked
+        drawPill(ctx,-2,-18,-12,-10,legW);
+        // Arm trailing back
+        drawPill(ctx,14,-22,26,-28,armW);
         ctx.restore();
 
     } else if(isJumping){
-        // === JUMP: compact tuck, knees up, arms wide ===
-        ctx.beginPath();ctx.arc(0,neckY-2,headR,0,Math.PI*2);ctx.fill();
-        // Torso
-        drawLimb(ctx,0,neckY+6,0,hipY+4,torsoWTop,torsoWBot);
-        // Arms spread
-        drawLimb(ctx,0,shoulderY+2,-14,shoulderY-6,armW1,foreW2);
-        drawLimb(ctx,0,shoulderY+2,14,shoulderY-4,armW1,foreW2);
-        // Legs tucked up
-        const lk1x=-6,lk1y=hipY+2,lf1x=-10,lf1y=hipY+14;
-        drawLimb(ctx,0,hipY+4,lk1x,lk1y,thighW1,thighW2);
-        drawLimb(ctx,lk1x,lk1y,lf1x,lf1y,shinW1,shinW2);
-        const lk2x=5,lk2y=hipY+3,lf2x=3,lf2y=hipY+15;
-        drawLimb(ctx,0,hipY+4,lk2x,lk2y,thighW1,thighW2);
-        drawLimb(ctx,lk2x,lk2y,lf2x,lf2y,shinW1,shinW2);
+        // === JUMP: knees tucked, arms up ===
+        // Head
+        ctx.beginPath();ctx.arc(0,neckY,headR,0,Math.PI*2);ctx.fill();
+        // Body
+        drawBody(ctx,shoulderY,hipY+6,shoulderW-2,waistW,shoulderY-4,shoulderY-2,-2,2,armW);
+        // Legs tucked up (knees bent)
+        drawPill(ctx,-5,hipY+6,-10,hipY+2,legW);
+        drawPill(ctx,-10,hipY+2,-8,hipY+14,legW-1);
+        drawPill(ctx,5,hipY+6,8,hipY+3,legW);
+        drawPill(ctx,8,hipY+3,6,hipY+15,legW-1);
 
     } else if(action===ACT.ATTACK){
-        // === ATTACK: lunge forward, sword swing arc ===
+        // === ATTACK: lunge with sword swing ===
         const t=attackProgress;
         // Head
         ctx.beginPath();ctx.arc(3,neckY+2,headR,0,Math.PI*2);ctx.fill();
-        // Torso leaning forward
-        drawLimb(ctx,3,neckY+10,-1,hipY+2,torsoWTop,torsoWBot);
+        // Body leaning forward
+        ctx.save();ctx.rotate(0.15);
+        drawBody(ctx,shoulderY+2,hipY+2,shoulderW-1,waistW,shoulderY+18,shoulderY+14,2,-4,armW);
+        ctx.restore();
         // Lunge legs
-        drawLimb(ctx,-1,hipY+2,10,hipY+16,thighW1,thighW2);
-        drawLimb(ctx,10,hipY+16,14,0,shinW1,shinW2);
-        drawLimb(ctx,-1,hipY+2,-10,hipY+14,thighW1,thighW2);
-        drawLimb(ctx,-10,hipY+14,-16,0,shinW1,shinW2);
-        // Sword arm swinging arc
+        drawPill(ctx,4,hipY+2,14,0,legW);
+        drawPill(ctx,-4,hipY+2,-14,0,legW);
+        // Sword arm — swings in arc
         const sAng=-Math.PI*0.8+t*Math.PI*1.2;
-        const elbX=3+Math.cos(sAng)*upperArm;
-        const elbY=shoulderY+4+Math.sin(sAng)*upperArm;
-        drawLimb(ctx,3,shoulderY+4,elbX,elbY,armW1,foreW1);
-        // Sword
-        const sLen=26;
-        const sEndX=elbX+Math.cos(sAng)*sLen;
-        const sEndY=elbY+Math.sin(sAng)*sLen;
-        ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(elbX,elbY);ctx.lineTo(sEndX,sEndY);ctx.stroke();
+        const handX=3+Math.cos(sAng)*20;
+        const handY=shoulderY+4+Math.sin(sAng)*20;
+        drawPill(ctx,3,shoulderY+4,handX,handY,armW);
+        // Sword blade
+        const sLen=28;
+        const bladeX=handX+Math.cos(sAng)*sLen;
+        const bladeY=handY+Math.sin(sAng)*sLen;
+        ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(handX,handY);ctx.lineTo(bladeX,bladeY);ctx.stroke();
         // Crossguard
-        const cgAng=sAng+Math.PI/2;
-        ctx.lineWidth=3;ctx.beginPath();
-        ctx.moveTo(elbX+Math.cos(cgAng)*4,elbY+Math.sin(cgAng)*4);
-        ctx.lineTo(elbX-Math.cos(cgAng)*4,elbY-Math.sin(cgAng)*4);
+        const cg=sAng+Math.PI/2;
+        ctx.lineWidth=4;ctx.beginPath();
+        ctx.moveTo(handX+Math.cos(cg)*5,handY+Math.sin(cg)*5);
+        ctx.lineTo(handX-Math.cos(cg)*5,handY-Math.sin(cg)*5);
         ctx.stroke();
-        // Off-hand arm back
-        drawLimb(ctx,3,shoulderY+4,-8,shoulderY+16,armW1,foreW2);
 
     } else if(isDefending){
-        // === BLOCK: wide stance, arm forward with shield ===
+        // === BLOCK: wide stance, shield arm ===
         ctx.beginPath();ctx.arc(0,neckY+2,headR,0,Math.PI*2);ctx.fill();
-        // Torso slightly crouched
-        drawLimb(ctx,0,neckY+10,0,hipY+2,torsoWTop,torsoWBot);
+        // Body crouched
+        drawBody(ctx,shoulderY+2,hipY+2,shoulderW,waistW+2,shoulderY+16,shoulderY+18,-2,2,armW);
         // Wide legs
-        drawLimb(ctx,0,hipY+2,10,hipY+16,thighW1,thighW2);
-        drawLimb(ctx,10,hipY+16,12,0,shinW1,shinW2);
-        drawLimb(ctx,0,hipY+2,-10,hipY+16,thighW1,thighW2);
-        drawLimb(ctx,-10,hipY+16,-12,0,shinW1,shinW2);
+        drawPill(ctx,-5,hipY+2,-12,0,legW);
+        drawPill(ctx,5,hipY+2,12,0,legW);
         // Shield arm forward
-        drawLimb(ctx,0,shoulderY+4,12,shoulderY+2,armW1,foreW1);
-        drawLimb(ctx,12,shoulderY+2,14,shoulderY+16,foreW1,foreW2);
+        drawPill(ctx,shoulderW-2,shoulderY+4,shoulderW+8,shoulderY+2,armW);
         // Shield arc
-        ctx.lineWidth=3;ctx.globalAlpha=0.6;
-        ctx.beginPath();ctx.arc(16,shoulderY+9,14,-Math.PI*0.45,Math.PI*0.45);ctx.stroke();
+        ctx.lineWidth=3.5;ctx.globalAlpha=0.5;
+        ctx.beginPath();ctx.arc(shoulderW+10,shoulderY+10,14,-Math.PI*0.5,Math.PI*0.5);ctx.stroke();
         ctx.globalAlpha=1;
-        // Back arm
-        drawLimb(ctx,0,shoulderY+4,-8,shoulderY+14,armW1,foreW2);
 
     } else {
-        // === RUN CYCLE: full articulated human shadow ===
+        // === RUN CYCLE: animated bathroom-sign figure ===
         const cycle=runCycle;
-        const legSwing=Math.sin(cycle)*0.65;
-        const armSwing=Math.sin(cycle)*0.55;
-        const bounce=Math.abs(Math.sin(cycle))*2.5;
-        const lean=0.12;
+        const legSwing=Math.sin(cycle)*0.55;
+        const armSwing=Math.sin(cycle)*12;
+        const bounce=Math.abs(Math.sin(cycle))*2;
 
         // Head
-        ctx.beginPath();ctx.arc(2,neckY+bounce,headR,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(0,neckY+bounce,headR,0,Math.PI*2);ctx.fill();
 
-        // Torso — filled trapezoid (shoulders wider than waist)
-        ctx.beginPath();
-        ctx.moveTo(-torsoWTop, shoulderY+bounce);
-        ctx.lineTo(torsoWTop, shoulderY+bounce);
-        ctx.lineTo(torsoWBot, hipY+bounce);
-        ctx.lineTo(-torsoWBot, hipY+bounce);
-        ctx.closePath();ctx.fill();
+        // Body+Arms as one connected shape
+        // Arms swing: front arm goes down, back arm goes down opposite
+        const lArmEnd=shoulderY+18-armSwing;
+        const rArmEnd=shoulderY+18+armSwing;
+        drawBody(ctx,shoulderY+bounce,hipY+bounce,shoulderW,waistW,lArmEnd+bounce,rArmEnd+bounce,0,0,armW);
 
-        // === FRONT LEG (thigh + shin) ===
-        const fThighAng=Math.PI/2+legSwing;
-        const fKneeX=Math.cos(fThighAng)*thighLen;
-        const fKneeY=hipY+bounce+Math.sin(fThighAng)*thighLen;
-        drawLimb(ctx,0,hipY+bounce,fKneeX,fKneeY,thighW1,thighW2);
-        // Shin
-        const fShinAng=Math.PI/2+Math.max(0,legSwing)*0.9+0.35;
-        let fFootX=fKneeX+Math.cos(fShinAng)*shinLen;
-        let fFootY=fKneeY+Math.sin(fShinAng)*shinLen;
+        // === FRONT LEG (pillar with rounded cap) ===
+        const fLegAng=Math.PI/2+legSwing;
+        const fFootX=Math.cos(fLegAng)*legLen;
+        let fFootY=hipY+bounce+Math.sin(fLegAng)*legLen;
         if(fFootY>0)fFootY=0;
-        drawLimb(ctx,fKneeX,fKneeY,fFootX,fFootY,shinW1,shinW2);
-        // Foot nub
-        ctx.beginPath();ctx.arc(fFootX+2,fFootY,2.5,0,Math.PI*2);ctx.fill();
+        drawPill(ctx,0,hipY+bounce,fFootX,fFootY,legW);
 
         // === BACK LEG ===
-        const bThighAng=Math.PI/2-legSwing;
-        const bKneeX=Math.cos(bThighAng)*thighLen;
-        const bKneeY=hipY+bounce+Math.sin(bThighAng)*thighLen;
-        drawLimb(ctx,0,hipY+bounce,bKneeX,bKneeY,thighW1,thighW2);
-        const bShinAng=Math.PI/2+Math.max(0,-legSwing)*0.9+0.35;
-        let bFootX=bKneeX+Math.cos(bShinAng)*shinLen;
-        let bFootY=bKneeY+Math.sin(bShinAng)*shinLen;
+        const bLegAng=Math.PI/2-legSwing;
+        const bFootX=Math.cos(bLegAng)*legLen;
+        let bFootY=hipY+bounce+Math.sin(bLegAng)*legLen;
         if(bFootY>0)bFootY=0;
-        drawLimb(ctx,bKneeX,bKneeY,bFootX,bFootY,shinW1,shinW2);
-        ctx.beginPath();ctx.arc(bFootX+2,bFootY,2.5,0,Math.PI*2);ctx.fill();
-
-        // === FRONT ARM (swings opposite to legs) ===
-        const fArmAng=-Math.PI/2-armSwing*0.8-0.35;
-        const fElbX=Math.cos(fArmAng)*upperArm;
-        const fElbY=shoulderY+3+bounce+Math.sin(fArmAng)*upperArm;
-        drawLimb(ctx,0,shoulderY+3+bounce,fElbX,fElbY,armW1,armW2);
-        const fHandAng=fArmAng+0.4;
-        const fHandX=fElbX+Math.cos(fHandAng)*foreArm;
-        const fHandY=fElbY+Math.sin(fHandAng)*foreArm;
-        drawLimb(ctx,fElbX,fElbY,fHandX,fHandY,foreW1,foreW2);
-
-        // === BACK ARM ===
-        const bArmAng=-Math.PI/2+armSwing*0.8-0.35;
-        const bElbX=Math.cos(bArmAng)*upperArm;
-        const bElbY=shoulderY+3+bounce+Math.sin(bArmAng)*upperArm;
-        drawLimb(ctx,0,shoulderY+3+bounce,bElbX,bElbY,armW1,armW2);
-        const bHandAng=bArmAng+0.4;
-        const bHandX=bElbX+Math.cos(bHandAng)*foreArm;
-        const bHandY=bElbY+Math.sin(bHandAng)*foreArm;
-        drawLimb(ctx,bElbX,bElbY,bHandX,bHandY,foreW1,foreW2);
+        drawPill(ctx,0,hipY+bounce,bFootX,bFootY,legW);
     }
     ctx.restore();
 }
