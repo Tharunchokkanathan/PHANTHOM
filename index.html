@@ -450,7 +450,7 @@ this.lastTime=performance.now();this.state='menu';this.zone=1;this.raf=null;
 this.player=new Entity(180,'#ffffff');
 this.phantom=new Entity(600,'#e94560');
 this.ai=new PhantomAI(this.phantom,this.player);
-this.obstacles=[];this.orbs=[];this.runDist=0;this.orbCount=0;
+this.obstacles=[];this.orbs=[];this.runDist=0;this.orbCount=0;this.obstaclesCleared=0;
 this.gameOver=false;this.rageActive=false;this.rageTimer=0;this.bgOff=0;
 this.runTime=0;this.spawnTimer=0;
 document.getElementById('btn-enter-arena').onclick=()=>this.startGame();
@@ -464,7 +464,7 @@ const texts=['ZONE 1 — THE CORRIDOR','ZONE 2 — THE PROVING','ZONE 3 — THE 
 this.showCinematic(texts[this.zone-1]||'ZONE '+this.zone,()=>{
 this.state='run';this.runDist=0;this.orbCount=0;this.obstacles=[];this.orbs=[];
 this.player.x=180;this.player.y=FLOOR;this.player.isJumping=false;this.player.isSliding=false;this.player.vy=0;this.player.runCycle=0;
-this.gameOver=false;this.spawnTimer=0;this.runTime=0;
+this.gameOver=false;this.spawnTimer=0;this.runTime=0;this.obstaclesCleared=0;
 document.getElementById('run-ui').style.display='block';
 document.querySelectorAll('.hp-container').forEach(e=>e.style.display='none');
 document.querySelector('.corruption-container').style.display='none';
@@ -489,10 +489,10 @@ const speed=250+this.zone*25;
 this.bgOff+=speed*dt;
 this.runDist+=(speed*dt)/80;
 this.player.runCycle+=dt*10;
-const target=40+this.zone*15;
-document.getElementById('run-dist').textContent=Math.floor(this.runDist)+'M / '+target+'M';
+const target=8+this.zone*2; // obstacles to clear per zone
+document.getElementById('run-dist').textContent=this.obstaclesCleared+' / '+target+' CLEARED';
 document.getElementById('run-orbs').textContent=this.orbCount+' ◆';
-if(this.runDist>=target){storage.addSP(20);this.startArena();return}
+if(this.obstaclesCleared>=target){storage.addSP(20);this.startArena();return}
 
 // Jump input with edge detection
 if(this.input.wantJump()){
@@ -509,7 +509,7 @@ if(this.spawnTimer<=0){this.spawnObstacle();this.spawnTimer=2.0-this.zone*0.1+Ma
 // Check obstacles
 for(let i=this.obstacles.length-1;i>=0;i--){
 let o=this.obstacles[i];o.x-=speed*dt;
-if(o.x<-120){this.obstacles.splice(i,1);continue}
+if(o.x<-120){this.obstaclesCleared++;this.obstacles.splice(i,1);continue}
 // Player hitbox: centered at player.x, width 20, from (y-h) to y
 const pr=this.player.x+10,pl=this.player.x-10;
 const pb=this.player.y;           // feet (FLOOR when grounded)
